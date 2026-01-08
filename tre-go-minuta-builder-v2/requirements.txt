@@ -1,0 +1,38 @@
+# ============================================================================
+# TRE-GO Minuta Builder - Dependências
+# ============================================================================
+#
+# IMPORTANTE:
+# - Python 3.10, 3.11 ou 3.12 (recomendado)
+# - Sempre instale em um ambiente virtual (venv)
+# - Ative o venv antes de instalar: source venv/bin/activate
+# - Se tiver problemas, recrie o venv e reinstale: pip install -r requirements.txt
+#
+# ============================================================================
+
+# Framework Web
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+websockets>=12.0
+
+# Agno Framework (AI Agents)
+agno[openai,lancedb]>=2.0.0
+
+# Database
+lancedb>=0.4.0
+sqlalchemy>=2.0.0
+
+# Processamento de PDFs
+pypdf>=3.17.0
+
+# Validação de dados
+pydantic>=2.5.0
+
+# Utilidades
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+pandas>=2.0.0  # Requerido pelo LanceDB para verificação de content_hash
+
+# Async
+aiofiles>=23.2.0
+httpx>=0.26.0

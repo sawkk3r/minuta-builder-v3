@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRE-GO Minuta Builder v2.0</title>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --primary-light: #2c5282;
+            --secondary: #38a169;
+            --warning: #d69e2e;
+            --danger: #e53e3e;
+            --bg-light: #f7fafc;
+            --bg-white: #ffffff;
+            --text-dark: #1a202c;
+            --text-muted: #718096;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header .status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--secondary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 1rem;
+            padding: 1rem;
+            height: calc(100vh - 70px);
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-content {
+            padding: 1rem;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Left Panel - Controles */
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .control-group input,
+        .control-group select,
+        .control-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .control-group input:focus,
+        .control-group select:focus,
+        .control-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Agent Cards */
+        .agent-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .agent-card {
+            background: var(--bg-light);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            transition: all 0.2s;
+        }
+
+        .agent-card:hover {
+            border-color: var(--primary);
+        }
+
+        .agent-card.active {
+            border-color: var(--secondary);
+            background: #f0fff4;
+        }
+
+        .agent-card .agent-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .agent-card .agent-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .agent-card .agent-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Center Panel - Chat */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem;
+            border-radius: var(--radius);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+        }
+
+        .message-agent {
+            align-self: flex-start;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+        }
+
+        .message-system {
+            align-self: center;
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .message-agent-name {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .message-confidence {
+            background: var(--secondary);
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.625rem;
+        }
+
+        .message-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message-meta {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .chat-input-area {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-light);
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            resize: none;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Right Panel - Histórico */
+        .history-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: var(--bg-light);
+        }
+
+        .history-item .time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .history-item .agent {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .history-item .preview {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Session Info */
+        .session-info {
+            background: var(--bg-light);
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .session-info strong {
+            color: var(--primary);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast-success {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .toast-error {
+            background: var(--danger);
+            color: white;
+        }
+
+        .toast-info {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 280px 1fr;
+            }
+            .panel:last-child {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            .panel:first-child {
+                display: none;
+            }
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.625rem;
+            font-weight: 600;
+        }
+
+        .badge-success { background: #c6f6d5; color: #276749; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fed7d7; color: #c53030; }
+        .badge-info { background: #bee3f8; color: #2b6cb0; }
+
+        /* Articles cited */
+        .articles-cited {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .article-tag {
+            background: var(--primary);
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: var(--radius);
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>
+            ⚖️ TRE-GO Minuta Builder v2.0
+        </h1>
+        <div class="status">
+            <span id="connection-status">
+                <span class="status-indicator" id="status-dot"></span>
+                <span id="status-text">Conectando...</span>
+            </span>
+            <span id="session-id-display">-</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Left Panel - Controles -->
+        <aside class="panel">
+            <div class="panel-header">
+                📋 Controles
+            </div>
+            <div class="panel-content">
+                <!-- Sessão -->
+                <div class="control-group">
+                    <label>Nova Sessão</label>
+                    <input type="text" id="artigo-input" placeholder="Ex: Art. 47" value="Art. 47">
+                    <input type="text" id="titulo-input" placeholder="Título do artigo" value="Competências do Gabinete" style="margin-top: 0.5rem;">
+                    <button class="btn btn-primary btn-block" style="margin-top: 0.5rem;" onclick="criarSessao()">
+                        ➕ Criar Sessão
+                    </button>
+                </div>
+
+                <!-- Agentes -->
+                <div class="control-group">
+                    <label>Selecione o Agente</label>
+                    <div class="agent-cards" id="agent-cards">
+                        <div class="agent-card" data-agent="1997" onclick="selecionarAgente('1997')">
+                            <div class="agent-name">📜 Especialista #1 - Res. 05/1997</div>
+                            <div class="agent-desc">Regulamento Original</div>
+                            <div class="agent-status">
+                                <span class="badge badge-success">Disponível</span>
+                            </div>
+                        </div>
+                        <div class="agent-card" data-agent="2007" onclick="selecionarAgente('2007')">
+                            <div class="agent-name">📄 Especialista #2 - Res. 113/2007</div>
+                            <div class="agent-desc">Versão 2007</div>
+                            <div class="agent-status">
+                                <span class="badge badge-success">Disponível</span>
+                            </div>
+                        </div>
+                        <div class="agent-card" data-agent="2017" onclick="selecionarAgente('2017')">
+                            <div class="agent-name">📑 Especialista #3 - Res. 275/2017</div>
+                            <div class="agent-desc">Versão Vigente</div>
+                            <div class="agent-status">
+                                <span class="badge badge-success">Disponível</span>
+                            </div>
+                        </div>
+                        <div class="agent-card" data-agent="alteracoes" onclick="selecionarAgente('alteracoes')">
+                            <div class="agent-name">📝 Especialista #4 - Alterações</div>
+                            <div class="agent-desc">2021-2025</div>
+                            <div class="agent-status">
+                                <span class="badge badge-success">Disponível</span>
+                            </div>
+                        </div>
+                        <div class="agent-card" data-agent="minuta" onclick="selecionarAgente('minuta')">
+                            <div class="agent-name">✨ Especialista #5 - Minuta V2</div>
+                            <div class="agent-desc">Versão em construção</div>
+                            <div class="agent-status">
+                                <span class="badge badge-success">Disponível</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ações -->
+                <div class="control-group">
+                    <label>Ações</label>
+                    <button class="btn btn-secondary btn-block" onclick="consultarColaborativo()" id="btn-colaborativo" disabled>
+                        🤝 Consultar Todos (Colaborativo)
+                    </button>
+                    <button class="btn btn-secondary btn-block" style="margin-top: 0.5rem;" onclick="consolidar()" id="btn-consolidar" disabled>
+                        🧠 Consolidar com Team
+                    </button>
+                    <button class="btn btn-outline btn-block" style="margin-top: 0.5rem;" onclick="exportarSessao()" id="btn-exportar" disabled>
+                        💾 Exportar Markdown
+                    </button>
+                    <button class="btn btn-outline btn-block" style="margin-top: 0.5rem;" onclick="gerarDocumento()" id="btn-documento" disabled>
+                        📄 Gerar Documento
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Panel - Chat -->
+        <section class="panel">
+            <div class="panel-header">
+                💬 Consulta aos Especialistas
+                <span id="agente-selecionado">Selecione um agente</span>
+            </div>
+            <div class="chat-container">
+                <div class="session-info" id="session-info" style="display: none;">
+                    <strong>Sessão:</strong> <span id="info-artigo">-</span> - <span id="info-titulo">-</span>
+                    <br>
+                    <small>ID: <span id="info-id">-</span> | Interações: <span id="info-interacoes">0</span></small>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message message-system">
+                        👋 Bem-vindo ao TRE-GO Minuta Builder v2.0!<br>
+                        Crie uma sessão e selecione um agente para começar.
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <div class="chat-input-container">
+                        <textarea 
+                            id="chat-input" 
+                            class="chat-input" 
+                            placeholder="Digite sua pergunta para o agente selecionado..."
+                            rows="2"
+                            disabled
+                        ></textarea>
+                        <button class="btn btn-primary" onclick="enviarPergunta()" id="btn-enviar" disabled>
+                            📤
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel - Histórico -->
+        <aside class="panel">
+            <div class="panel-header">
+                📚 Histórico
+                <span id="history-count">0 interações</span>
+            </div>
+            <div class="panel-content" id="history-panel">
+                <p style="color: var(--text-muted); font-size: 0.875rem; text-align: center;">
+                    Nenhuma interação ainda
+                </p>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // ============================================================================
+        // Estado da Aplicação
+        // ============================================================================
+        
+        const state = {
+            sessionId: null,
+            agenteAtual: null,
+            ws: null,
+            interacoes: [],
+            connected: false
+        };
+
+        const API_URL = 'http://localhost:8000';
+        const WS_URL = 'ws://localhost:8000';
+
+        // ============================================================================
+        // Utilidades
+        // ============================================================================
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 4000);
+        }
+
+        function updateStatus(connected) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            
+            if (connected) {
+                dot.style.background = '#38a169';
+                text.textContent = 'Conectado';
+            } else {
+                dot.style.background = '#e53e3e';
+                text.textContent = 'Desconectado';
+            }
+            
+            state.connected = connected;
+        }
+
+        function formatTime(date) {
+            return new Date(date).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // ============================================================================
+        // WebSocket
+        // ============================================================================
+
+        function conectarWebSocket() {
+            if (!state.sessionId) return;
+            
+            const wsUrl = `${WS_URL}/ws/${state.sessionId}`;
+            console.log('Conectando WebSocket:', wsUrl);
+            
+            state.ws = new WebSocket(wsUrl);
+            
+            state.ws.onopen = () => {
+                console.log('WebSocket conectado');
+                updateStatus(true);
+                showToast('Conectado ao servidor', 'success');
+            };
+            
+            state.ws.onclose = () => {
+                console.log('WebSocket desconectado');
+                updateStatus(false);
+            };
+            
+            state.ws.onerror = (error) => {
+                console.error('Erro WebSocket:', error);
+                showToast('Erro na conexão', 'error');
+            };
+            
+            state.ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Mensagem recebida:', data);
+                handleWSMessage(data);
+            };
+        }
+
+        function handleWSMessage(data) {
+            switch (data.tipo) {
+                case 'status':
+                    addSystemMessage(data.mensagem);
+                    break;
+                    
+                case 'resposta_agente':
+                    addAgentMessage(data);
+                    addToHistory(data);
+                    updateInteractionCount();
+                    habilitarBotoes();
+                    break;
+                    
+                case 'consolidacao_completa':
+                    addConsolidationMessage(data);
+                    showToast('Consolidação concluída!', 'success');
+                    break;
+                    
+                case 'sessao_finalizada':
+                    showToast(data.mensagem, 'success');
+                    break;
+                    
+                case 'erro':
+                    showToast(data.mensagem, 'error');
+                    break;
+            }
+        }
+
+        // ============================================================================
+        // Sessão
+        // ============================================================================
+
+        async function criarSessao() {
+            const artigo = document.getElementById('artigo-input').value.trim();
+            const titulo = document.getElementById('titulo-input').value.trim();
+            
+            if (!artigo || !titulo) {
+                showToast('Preencha o artigo e título', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/sessao/criar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ artigo, titulo })
+                });
+                
+                const data = await response.json();
+                
+                state.sessionId = data.id;
+                state.interacoes = [];
+                
+                // Atualizar UI
+                document.getElementById('session-id-display').textContent = `#${data.id.slice(0, 8)}`;
+                document.getElementById('session-info').style.display = 'block';
+                document.getElementById('info-artigo').textContent = data.artigo;
+                document.getElementById('info-titulo').textContent = data.titulo;
+                document.getElementById('info-id').textContent = data.id.slice(0, 8);
+                document.getElementById('info-interacoes').textContent = '0';
+                
+                // Limpar chat
+                document.getElementById('chat-messages').innerHTML = '';
+                addSystemMessage(`📝 Sessão criada: ${artigo} - ${titulo}`);
+                
+                // Limpar histórico
+                document.getElementById('history-panel').innerHTML = `
+                    <p style="color: var(--text-muted); font-size: 0.875rem; text-align: center;">
+                        Nenhuma interação ainda
+                    </p>
+                `;
+                
+                // Conectar WebSocket
+                conectarWebSocket();
+                
+                // Habilitar botão colaborativo
+                habilitarBotoes();
+                
+                showToast('Sessão criada com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro ao criar sessão:', error);
+                showToast('Erro ao criar sessão', 'error');
+            }
+        }
+
+        // ============================================================================
+        // Agentes
+        // ============================================================================
+
+        function selecionarAgente(agente) {
+            // Atualizar estado
+            state.agenteAtual = agente;
+            
+            // Atualizar UI dos cards
+            document.querySelectorAll('.agent-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`[data-agent="${agente}"]`).classList.add('active');
+            
+            // Atualizar label
+            const nomes = {
+                '1997': '📜 Especialista #1 - Res. 05/1997',
+                '2007': '📄 Especialista #2 - Res. 113/2007',
+                '2017': '📑 Especialista #3 - Res. 275/2017',
+                'alteracoes': '📝 Especialista #4 - Alterações 2021-2025',
+                'minuta': '✨ Especialista #5 - Minuta V2'
+            };
+            document.getElementById('agente-selecionado').textContent = nomes[agente];
+            
+            // Habilitar input se houver sessão
+            if (state.sessionId) {
+                document.getElementById('chat-input').disabled = false;
+                document.getElementById('btn-enviar').disabled = false;
+            }
+        }
+
+        function enviarPergunta() {
+            const input = document.getElementById('chat-input');
+            const pergunta = input.value.trim();
+            
+            if (!pergunta) return;
+            if (!state.sessionId) {
+                showToast('Crie uma sessão primeiro', 'error');
+                return;
+            }
+            if (!state.agenteAtual) {
+                showToast('Selecione um agente', 'error');
+                return;
+            }
+            if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                showToast('Conexão não estabelecida', 'error');
+                return;
+            }
+            
+            // Adicionar mensagem do usuário
+            addUserMessage(pergunta);
+            
+            // Enviar via WebSocket
+            state.ws.send(JSON.stringify({
+                acao: 'consultar_agente',
+                agente: state.agenteAtual,
+                pergunta: pergunta
+            }));
+            
+            // Limpar input
+            input.value = '';
+            
+            // Desabilitar temporariamente
+            document.getElementById('btn-enviar').disabled = true;
+        }
+
+        // ============================================================================
+        // Chat Messages
+        // ============================================================================
+
+        function addUserMessage(text) {
+            const container = document.getElementById('chat-messages');
+            const msg = document.createElement('div');
+            msg.className = 'message message-user';
+            msg.innerHTML = `
+                <div class="message-content">${escapeHtml(text)}</div>
+                <div class="message-meta">${formatTime(new Date())}</div>
+            `;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addAgentMessage(data) {
+            const container = document.getElementById('chat-messages');
+            const msg = document.createElement('div');
+            msg.className = 'message message-agent';
+            
+            let articlesHtml = '';
+            if (data.artigos && data.artigos.length > 0) {
+                articlesHtml = `
+                    <div class="articles-cited">
+                        ${data.artigos.map(a => `<span class="article-tag">Art. ${a}</span>`).join('')}
+                    </div>
+                `;
+            }
+            
+            const confidence = Math.round((data.confianca || 0) * 100);
+            
+            msg.innerHTML = `
+                <div class="message-header">
+                    <span class="message-agent-name">${data.agente_nome || data.agente}</span>
+                    <span class="message-confidence">${confidence}% confiança</span>
+                </div>
+                <div class="message-content">${escapeHtml(data.resposta)}</div>
+                ${articlesHtml}
+                <div class="message-meta">${formatTime(data.timestamp)}</div>
+            `;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+            
+            // Reabilitar envio
+            document.getElementById('btn-enviar').disabled = false;
+        }
+
+        function addSystemMessage(text) {
+            const container = document.getElementById('chat-messages');
+            const msg = document.createElement('div');
+            msg.className = 'message message-system';
+            msg.textContent = text;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addConsolidationMessage(data) {
+            const container = document.getElementById('chat-messages');
+            const msg = document.createElement('div');
+            msg.className = 'message message-agent';
+            msg.style.background = '#f0fff4';
+            msg.style.borderColor = '#38a169';
+            
+            let gapsHtml = '';
+            if (data.gaps && data.gaps.length > 0) {
+                gapsHtml = `
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 4px;">
+                        <strong>⚠️ Gaps Identificados:</strong>
+                        <ul style="margin: 0.5rem 0 0 1rem;">
+                            ${data.gaps.map(g => `<li>${g.descricao}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            msg.innerHTML = `
+                <div class="message-header">
+                    <span class="message-agent-name">🧠 Team Coordenador</span>
+                    <span class="badge badge-success">Consolidação</span>
+                </div>
+                <div class="message-content">${escapeHtml(data.proposta_texto || '')}</div>
+                ${gapsHtml}
+                <div class="message-meta">${formatTime(data.timestamp)}</div>
+            `;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================================================
+        // Histórico
+        // ============================================================================
+
+        function addToHistory(data) {
+            const container = document.getElementById('history-panel');
+            
+            // Remover mensagem inicial se existir
+            if (container.querySelector('p')) {
+                container.innerHTML = '';
+            }
+            
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <div class="time">${formatTime(data.timestamp)}</div>
+                <div class="agent">${data.agente_nome || data.agente}</div>
+                <div class="preview">${(data.resposta || '').slice(0, 80)}...</div>
+            `;
+            
+            container.insertBefore(item, container.firstChild);
+            
+            // Atualizar contador
+            state.interacoes.push(data);
+            document.getElementById('history-count').textContent = `${state.interacoes.length} interações`;
+        }
+
+        function updateInteractionCount() {
+            document.getElementById('info-interacoes').textContent = state.interacoes.length;
+        }
+
+        // ============================================================================
+        // Ações
+        // ============================================================================
+
+        function habilitarBotoes() {
+            const temInteracoes = state.interacoes.length >= 1;
+            document.getElementById('btn-colaborativo').disabled = !state.sessionId;
+            document.getElementById('btn-consolidar').disabled = !temInteracoes;
+            document.getElementById('btn-exportar').disabled = !temInteracoes;
+            document.getElementById('btn-documento').disabled = !temInteracoes;
+        }
+
+        function consultarColaborativo() {
+            if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                showToast('Conexão não estabelecida', 'error');
+                return;
+            }
+            
+            const pergunta = document.getElementById('chat-input').value.trim();
+            if (!pergunta) {
+                showToast('Digite uma pergunta primeiro', 'error');
+                return;
+            }
+            
+            // Adicionar mensagem do usuário no chat (PROBLEMA 1 CORRIGIDO)
+            addUserMessage(pergunta);
+            
+            state.ws.send(JSON.stringify({
+                acao: 'consultar_colaborativo',
+                pergunta: pergunta
+            }));
+            
+            addSystemMessage('🤝 Consultando todos os agentes em modo colaborativo...');
+            addSystemMessage('💡 Cada agente verá as respostas dos anteriores antes de responder');
+            
+            // Limpar input
+            document.getElementById('chat-input').value = '';
+        }
+        
+        function consolidar() {
+            if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+                showToast('Conexão não estabelecida', 'error');
+                return;
+            }
+            
+            // PROBLEMA 2 CORRIGIDO: Verificar se o campo de instrução tem conteúdo
+            // O campo de texto pode estar em diferentes lugares - vamos tentar encontrar
+            let tema = '';
+            
+            // Tentar pegar do campo de instrução/artigo se existir
+            const artigoInput = document.getElementById('artigo-input');
+            if (artigoInput) {
+                tema = artigoInput.value.trim();
+            }
+            
+            // Se não houver campo de instrução específico, usar vazio (consolidar toda conversa)
+            // O backend deve tratar: se tema vazio, consolida toda a sessão
+            state.ws.send(JSON.stringify({
+                acao: 'consolidar',
+                tema: tema || ''  // Se vazio, backend consolida toda a conversa
+            }));
+            
+            if (tema) {
+                addSystemMessage(`🧠 Consolidando com instrução específica: "${tema}"`);
+            } else {
+                addSystemMessage('🧠 Consolidando toda a conversa da sessão...');
+            }
+            addSystemMessage('💡 Os agentes usarão modo colaborativo (verão respostas uns dos outros)');
+        }
+
+        async function exportarSessao() {
+            if (!state.sessionId) return;
+            
+            try {
+                window.open(`${API_URL}/sessao/${state.sessionId}/exportar`, '_blank');
+                showToast('Download iniciado!', 'success');
+            } catch (error) {
+                showToast('Erro ao exportar', 'error');
+            }
+        }
+
+        async function gerarDocumento() {
+            if (!state.sessionId) return;
+            
+            try {
+                window.open(`${API_URL}/sessao/${state.sessionId}/documento-consolidado`, '_blank');
+                showToast('Documento gerado!', 'success');
+            } catch (error) {
+                showToast('Erro ao gerar documento', 'error');
+            }
+        }
+
+        // ============================================================================
+        // Event Listeners
+        // ============================================================================
+
+        document.getElementById('chat-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                enviarPergunta();
+            }
+        });
+
+        // Verificar status inicial da API
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(`${API_URL}/status`);
+                if (response.ok) {
+                    console.log('API disponível');
+                }
+            } catch (error) {
+                console.warn('API não disponível:', error);
+                showToast('API não disponível. Verifique se o servidor está rodando.', 'error');
+            }
+        }
+
+        // Inicialização
+        checkApiStatus();
+    </script>
+</body>
+</html>

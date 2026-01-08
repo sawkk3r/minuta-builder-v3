@@ -1,0 +1,53 @@
+# ============================================================================
+# TRE-GO Minuta Builder - Git Ignore
+# ============================================================================
+
+# Ambiente Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos de configuração sensíveis
+.env
+*.env.local
+
+# Databases e arquivos temporários
+tmp/
+*.db
+*.sqlite
+*.sqlite3
+lancedb_*/
+
+# Exports (podem ser gerados novamente)
+exports/*.md
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+*.cache
+
+# Arquivos grandes (PDFs originais - manter em backup separado)
+files/regulamentos/**/*.pdf
+*.pdf
+
+# Node (caso use para frontend)
+node_modules/
