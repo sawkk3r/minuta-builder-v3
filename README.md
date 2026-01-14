@@ -64,6 +64,13 @@ O sistema está pronto para deploy na internet! Seus colegas podem usar o MVP on
 - ✅ Frontend detecta automaticamente a URL da API
 - ✅ Configuração de variáveis de ambiente
 - ✅ Health checks e monitoramento
+- ✅ **Segurança**: Swagger desabilitado em produção, autenticação para endpoints administrativos
+
+**🔒 Segurança:**
+- **Guia de Segurança**: Veja [`SEGURANCA.md`](SEGURANCA.md) para proteger sua aplicação
+- Swagger desabilitado em produção por padrão
+- Autenticação básica para endpoints de indexação
+- CORS configurável
 
 ---
 
@@ -122,7 +129,18 @@ OPENAI_API_KEY=sk-sua-chave-aqui
 MODEL_AGENTES=gpt-5-mini-2025-08-07       # Econômico para agentes
 MODEL_COORDENADOR=gpt-5.2-2025-12-11        # Poderoso para consolidação (com reasoning)
 EMBEDDING_MODEL=text-embedding-3-small
+
+# Segurança (OBRIGATÓRIO em produção)
+ADMIN_USERNAME=seu-usuario-forte          # Para proteger endpoints administrativos
+ADMIN_PASSWORD=sua-senha-muito-forte      # Mínimo 16 caracteres recomendado
+ALLOWED_ORIGINS=https://seu-dominio.com   # Origens permitidas (não use * em produção)
+DISABLE_DOCS_IN_PRODUCTION=true           # Desabilitar Swagger em produção (padrão: true)
 ```
+
+**⚠️ IMPORTANTE - Segurança:**
+- Configure `ADMIN_USERNAME` e `ADMIN_PASSWORD` fortes em produção
+- Não use `ALLOWED_ORIGINS=*` em produção
+- Veja [`SEGURANCA.md`](SEGURANCA.md) para mais detalhes
 
 ### 3. Adicionar documentos
 
@@ -169,6 +187,45 @@ files/regulamentos/
 
 Na primeira vez ou se você deletou os bancos de dados em `tmp/`, execute:
 
+**🌐 Para produção (deploy online):**
+
+Se você fez deploy na internet (Render, Railway, etc.), use uma das opções abaixo:
+
+**Opção 1: Via Swagger (Recomendado - Mais fácil)** ✨
+
+1. Acesse a documentação da API: `https://sua-url.onrender.com/docs`
+2. Procure pelo endpoint: `POST /knowledge/indexar`
+3. Clique em "Try it out"
+4. Configure os parâmetros:
+   - `force`: `true` (para forçar reindexação completa)
+   - `versao`: deixe vazio (para indexar todas) ou especifique uma versão
+5. Clique em "Execute"
+6. Aguarde a resposta confirmando que a indexação foi iniciada
+
+**Opção 2: Via PowerShell (Windows)**
+
+```powershell
+# Indexar todas as versões
+Invoke-RestMethod -Uri "https://sua-url.onrender.com/knowledge/indexar?force=true" -Method POST
+
+# OU indexar apenas uma versão específica
+Invoke-RestMethod -Uri "https://sua-url.onrender.com/knowledge/indexar?versao=minuta&force=true" -Method POST
+Invoke-RestMethod -Uri "https://sua-url.onrender.com/knowledge/indexar?versao=2017&force=true" -Method POST
+```
+
+**Opção 3: Via Terminal Linux/Mac ou Git Bash (Windows)**
+
+```bash
+# Indexar todas as versões
+curl -X POST "https://sua-url.onrender.com/knowledge/indexar?force=true"
+
+# OU indexar apenas uma versão específica
+curl -X POST "https://sua-url.onrender.com/knowledge/indexar?versao=minuta&force=true"
+curl -X POST "https://sua-url.onrender.com/knowledge/indexar?versao=2017&force=true"
+```
+
+**💻 Para desenvolvimento local:**
+
 ```bash
 # Indexar todas as versões
 curl -X POST "http://localhost:8000/knowledge/indexar?force=true"
@@ -177,6 +234,18 @@ curl -X POST "http://localhost:8000/knowledge/indexar?force=true"
 curl -X POST "http://localhost:8000/knowledge/indexar?versao=minuta&force=true"
 curl -X POST "http://localhost:8000/knowledge/indexar?versao=2017&force=true"
 # etc...
+```
+
+**📊 Verificar status da indexação:**
+
+Após iniciar a indexação, você pode verificar o status:
+
+```bash
+# Via Swagger: GET /knowledge/status
+# Via PowerShell:
+Invoke-RestMethod -Uri "https://sua-url.onrender.com/knowledge/status" -Method GET
+# Via curl:
+curl "https://sua-url.onrender.com/knowledge/status"
 ```
 
 #### Após modificar arquivos
@@ -362,12 +431,39 @@ curl -X POST "http://localhost:8000/knowledge/indexar?force=true"
 
 ### Verificar status da indexação
 
+**💻 Para desenvolvimento local:**
+
 ```bash
 # Ver status de todas as knowledge bases
 curl http://localhost:8000/knowledge/status
 
 # Ver status geral do sistema
 curl http://localhost:8000/status
+```
+
+**🌐 Para produção (deploy online):**
+
+**Via Swagger (Recomendado):**
+1. Acesse: `https://sua-url.onrender.com/docs`
+2. Procure por: `GET /knowledge/status` ou `GET /status`
+3. Clique em "Try it out" → "Execute"
+
+**Via PowerShell (Windows):**
+```powershell
+# Status das knowledge bases
+Invoke-RestMethod -Uri "https://sua-url.onrender.com/knowledge/status" -Method GET
+
+# Status geral do sistema
+Invoke-RestMethod -Uri "https://sua-url.onrender.com/status" -Method GET
+```
+
+**Via Terminal Linux/Mac ou Git Bash:**
+```bash
+# Status das knowledge bases
+curl "https://sua-url.onrender.com/knowledge/status"
+
+# Status geral do sistema
+curl "https://sua-url.onrender.com/status"
 ```
 
 ## 📖 Como Usar
