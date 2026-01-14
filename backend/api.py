@@ -209,9 +209,10 @@ manager = ConnectionManager()
 # ENDPOINTS REST - STATUS E INFO
 # ============================================================================
 
-@app.get("/")
+@app.get("/api")
+@app.get("/api/info")
 async def root():
-    """Endpoint raiz com informações da API."""
+    """Endpoint com informações da API."""
     return {
         "sistema": "TRE-GO Minuta Builder",
         "versao": "2.0.0",
@@ -1187,13 +1188,17 @@ async def handle_gerar_minuta(
 # IMPORTANTE: Deve ser adicionado DEPOIS de todos os outros endpoints
 # para que as rotas da API tenham prioridade sobre o frontend
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-if FRONTEND_DIR.exists() and os.getenv("SERVE_FRONTEND", "false").lower() == "true":
+SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "false").lower() == "true"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+
+# Servir frontend se: SERVE_FRONTEND=true OU se estiver em produção
+if FRONTEND_DIR.exists() and (SERVE_FRONTEND or ENVIRONMENT == "production"):
     # Montar frontend na raiz, mas apenas para rotas que não começam com /api, /docs, /ws, etc.
     # FastAPI já prioriza rotas definidas antes do mount
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
     logger.info(f"📱 Frontend será servido de: {FRONTEND_DIR}")
 else:
-    logger.info("📱 Frontend não será servido (use SERVE_FRONTEND=true para habilitar)")
+    logger.info(f"📱 Frontend não será servido (SERVE_FRONTEND={SERVE_FRONTEND}, ENVIRONMENT={ENVIRONMENT})")
 
 
 # ============================================================================
