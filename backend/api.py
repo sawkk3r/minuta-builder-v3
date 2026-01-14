@@ -36,6 +36,15 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)  # Cliente HTTP urllib3
 load_dotenv()
 
 # Importar módulos locais
+# Ajustar sys.path para garantir que os imports funcionem
+import sys
+from pathlib import Path
+
+# Adicionar diretório backend ao path se não estiver
+backend_dir = Path(__file__).parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 from models import (
     CriarSessaoRequest, ConsultarAgenteRequest, ConsolidarRequest,
     VersaoRegulamento, StatusConsulta, InteracaoAgente, RespostaAgente,

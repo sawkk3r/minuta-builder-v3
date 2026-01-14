@@ -41,7 +41,7 @@ RUN mkdir -p tmp exports logs
 # Variáveis de ambiente padrão (podem ser sobrescritas)
 ENV API_HOST=0.0.0.0 \
     API_PORT=8000 \
-    PYTHONPATH=/app \
+    PYTHONPATH=/app:/app/backend \
     SERVE_FRONTEND=true \
     ENVIRONMENT=production
 
