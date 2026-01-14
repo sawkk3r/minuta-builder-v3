@@ -3,10 +3,11 @@
 # API FastAPI com WebSockets para interação em tempo real
 # ============================================================================
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from contextlib import asynccontextmanager
 import json
 import asyncio
@@ -16,6 +17,7 @@ from typing import Dict, List, Optional
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import secrets
 
 # Configurar logging
 logging.basicConfig(
@@ -34,6 +36,15 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)  # Cliente HTTP urllib3
 
 # Carregar variáveis de ambiente
 load_dotenv()
+
+# Configurações de segurança
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "change-me-in-production")
+DISABLE_DOCS_IN_PRODUCTION = os.getenv("DISABLE_DOCS_IN_PRODUCTION", "true").lower() == "true"
+
+# Autenticação básica para endpoints administrativos
+security = HTTPBasic()
 
 # Importar módulos locais
 # Ajustar sys.path para garantir que os imports funcionem
@@ -133,6 +144,11 @@ async def lifespan(app: FastAPI):
 # APLICAÇÃO FASTAPI
 # ============================================================================
 
+# Configurar documentação (desabilitar em produção se configurado)
+docs_url = "/docs" if not (ENVIRONMENT == "production" and DISABLE_DOCS_IN_PRODUCTION) else None
+redoc_url = "/redoc" if not (ENVIRONMENT == "production" and DISABLE_DOCS_IN_PRODUCTION) else None
+openapi_url = "/openapi.json" if not (ENVIRONMENT == "production" and DISABLE_DOCS_IN_PRODUCTION) else None
+
 app = FastAPI(
     title="TRE-GO Minuta Builder API",
     description="""
@@ -155,15 +171,22 @@ app = FastAPI(
     - minuta: Minuta V2 (Em construção)
     """,
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url=openapi_url
 )
 
-# CORS
+# CORS - Configurar origens permitidas
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+if "*" in ALLOWED_ORIGINS and ENVIRONMENT == "production":
+    logger.warning("⚠️ CORS permitindo todas as origens em produção! Configure ALLOWED_ORIGINS no .env")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -203,6 +226,23 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+
+# ============================================================================
+# AUTENTICAÇÃO E SEGURANÇA
+# ============================================================================
+
+def verify_admin(credentials: HTTPBasicCredentials = Security(security)):
+    """Verifica credenciais de administrador."""
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Credenciais inválidas",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 
 # ============================================================================
@@ -515,14 +555,41 @@ async def consolidar_analises(request: ConsolidarRequest):
 async def knowledge_status():
     """Status das bases de conhecimento."""
     km = get_knowledge_manager()
-    return km.status()
+    status_info = km.status()
+    
+    # Adicionar informações detalhadas sobre cada knowledge base
+    detalhes = {}
+    for versao in ["1997", "2007", "2017", "alteracoes", "minuta"]:
+        knowledge = km.obter_knowledge(versao)
+        if knowledge and hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'table'):
+            table = knowledge.vector_db.table
+            if table:
+                try:
+                    count = table.count_rows()
+                    detalhes[versao] = {
+                        "indexado": count is not None and count > 0,
+                        "total_registros": count if count is not None else 0
+                    }
+                except Exception as e:
+                    detalhes[versao] = {
+                        "indexado": False,
+                        "erro": str(e)
+                    }
+            else:
+                detalhes[versao] = {"indexado": False, "erro": "Tabela não carregada"}
+        else:
+            detalhes[versao] = {"indexado": False, "erro": "Knowledge base não encontrada"}
+    
+    status_info["detalhes_versoes"] = detalhes
+    return status_info
 
 
 @app.post("/knowledge/indexar")
 async def indexar_knowledge(
     versao: Optional[str] = None,
     force: bool = False,
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    username: str = Depends(verify_admin)
 ):
     """
     Indexa documentos nas bases de conhecimento.
@@ -538,11 +605,37 @@ async def indexar_knowledge(
         - POST /knowledge/indexar?force=true (reindexar todas as versões)
     """
     km = get_knowledge_manager()
+    agentes = get_gerenciador_agentes()
     
     # Executar em background para não bloquear
     async def indexar():
         resultados = await km.indexar_documentos(versao=versao, force=force)
         logger.info(f"Indexação concluída: {resultados}")
+        
+        # CRÍTICO: Recarregar knowledge bases nos agentes após indexação
+        versoes_para_recarregar = [versao] if versao else ["1997", "2007", "2017", "alteracoes", "minuta"]
+        
+        for v in versoes_para_recarregar:
+            try:
+                knowledge = km.obter_knowledge(v)
+                if knowledge:
+                    # Recarregar tabela no knowledge
+                    if hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'uri'):
+                        import lancedb
+                        lance_uri = knowledge.vector_db.uri
+                        lance_table_name = getattr(knowledge.vector_db, 'table_name', f"regulamento_{v}")
+                        lance_conn = lancedb.connect(lance_uri)
+                        if lance_table_name in lance_conn.table_names():
+                            knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
+                            logger.info(f"   🔄 Knowledge base '{v}' recarregada após indexação")
+                            
+                            # Atualizar no agente correspondente
+                            agente = agentes.obter_agente(v)
+                            if agente and hasattr(agente, 'agent') and agente.agent:
+                                agente.agent.knowledge = knowledge
+                                logger.info(f"   🔄 Agente '{v}' atualizado com nova knowledge base")
+            except Exception as e:
+                logger.warning(f"   ⚠️ Erro ao recarregar agente '{v}' após indexação: {e}")
     
     if background_tasks:
         background_tasks.add_task(indexar)
@@ -554,13 +647,33 @@ async def indexar_knowledge(
         }
     else:
         resultados = await km.indexar_documentos(versao=versao, force=force)
+        
+        # Recarregar agentes após indexação síncrona
+        versoes_para_recarregar = [versao] if versao else ["1997", "2007", "2017", "alteracoes", "minuta"]
+        for v in versoes_para_recarregar:
+            try:
+                knowledge = km.obter_knowledge(v)
+                if knowledge and hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'uri'):
+                    import lancedb
+                    lance_uri = knowledge.vector_db.uri
+                    lance_table_name = getattr(knowledge.vector_db, 'table_name', f"regulamento_{v}")
+                    lance_conn = lancedb.connect(lance_uri)
+                    if lance_table_name in lance_conn.table_names():
+                        knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
+                        agente = agentes.obter_agente(v)
+                        if agente and hasattr(agente, 'agent') and agente.agent:
+                            agente.agent.knowledge = knowledge
+            except Exception as e:
+                logger.warning(f"   ⚠️ Erro ao recarregar agente '{v}': {e}")
+        
         return {"status": "concluído", "resultados": resultados}
 
 
 @app.post("/knowledge/atualizar")
 async def atualizar_knowledge(
     versao: str,
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    username: str = Depends(verify_admin)
 ):
     """
     Endpoint conveniente para atualizar a indexação de uma versão específica após alterar arquivos.
@@ -590,10 +703,34 @@ async def atualizar_knowledge(
         )
     
     km = get_knowledge_manager()
+    agentes = get_gerenciador_agentes()
     
     async def indexar():
         resultados = await km.indexar_documentos(versao=versao, force=True)
         logger.info(f"Atualização de '{versao}' concluída: {resultados}")
+        
+        # CRÍTICO: Recarregar knowledge base no agente correspondente após indexação
+        try:
+            knowledge = km.obter_knowledge(versao)
+            if knowledge:
+                # Recarregar tabela no knowledge
+                if hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'uri'):
+                    import lancedb
+                    lance_uri = knowledge.vector_db.uri
+                    lance_table_name = getattr(knowledge.vector_db, 'table_name', f"regulamento_{versao}")
+                    lance_conn = lancedb.connect(lance_uri)
+                    if lance_table_name in lance_conn.table_names():
+                        knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
+                        logger.info(f"   🔄 Knowledge base '{versao}' recarregada após indexação")
+                
+                # Atualizar no agente correspondente
+                agente = agentes.obter_agente(versao)
+                if agente and hasattr(agente, 'agent') and agente.agent:
+                    agente.agent.knowledge = knowledge
+                    logger.info(f"   🔄 Agente '{versao}' atualizado com nova knowledge base")
+        except Exception as e:
+            logger.warning(f"   ⚠️ Erro ao recarregar agente após indexação: {e}")
+        
         return resultados
     
     if background_tasks:

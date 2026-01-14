@@ -253,18 +253,40 @@ class KnowledgeManager:
                     alteracoes_dir = self.files_dir / "alteracoes_menores"
                     arquivos_ja_adicionados = set(arquivos_encontrados)  # Manter os que já foram encontrados
                     
+                    logger.info(f"   📂 Caminho do diretório: {alteracoes_dir}")
+                    logger.info(f"   📂 Diretório existe: {alteracoes_dir.exists()}")
+                    logger.info(f"   📂 É diretório: {alteracoes_dir.is_dir() if alteracoes_dir.exists() else False}")
+                    
                     if alteracoes_dir.exists() and alteracoes_dir.is_dir():
                         # Buscar TODOS os arquivos PDF e TXT no diretório alteracoes_menores
+                        arquivos_encontrados_no_dir = []
                         for ext in ['.txt', '.pdf']:
-                            for filepath in alteracoes_dir.glob(f"*{ext}"):
+                            pattern = f"*{ext}"
+                            logger.info(f"   🔍 Buscando arquivos com padrão: {pattern}")
+                            for filepath in alteracoes_dir.glob(pattern):
                                 rel_path = filepath.relative_to(self.files_dir)
                                 rel_path_str = str(rel_path)
+                                arquivos_encontrados_no_dir.append(rel_path_str)
+                                logger.info(f"   📄 Arquivo encontrado no diretório: {filepath.name} → {rel_path_str}")
                                 
                                 # Adicionar apenas se ainda não foi adicionado
                                 if rel_path_str not in arquivos_ja_adicionados:
                                     arquivos_encontrados.append(rel_path_str)
                                     arquivos_ja_adicionados.add(rel_path_str)
-                                    logger.info(f"   ✅ Encontrado: {rel_path}")
+                                    logger.info(f"   ✅ Adicionado à lista: {rel_path_str}")
+                        
+                        if not arquivos_encontrados_no_dir:
+                            logger.warning(f"   ⚠️ Nenhum arquivo PDF ou TXT encontrado em {alteracoes_dir}")
+                            # Listar todos os arquivos no diretório para debug
+                            try:
+                                todos_arquivos = list(alteracoes_dir.iterdir())
+                                logger.info(f"   📋 Arquivos no diretório ({len(todos_arquivos)} total):")
+                                for f in todos_arquivos:
+                                    logger.info(f"      - {f.name} ({'arquivo' if f.is_file() else 'diretório'})")
+                            except Exception as e:
+                                logger.warning(f"   ⚠️ Erro ao listar arquivos: {e}")
+                    else:
+                        logger.error(f"   ❌ Diretório alteracoes_menores não existe ou não é um diretório: {alteracoes_dir}")
                     
                     # Também procurar arquivos que começam com "Res_" na raiz (backward compatibility)
                     for ext in ['.txt', '.pdf']:
@@ -274,10 +296,12 @@ class KnowledgeManager:
                             if rel_path_str not in arquivos_ja_adicionados:
                                 arquivos_encontrados.append(rel_path_str)
                                 arquivos_ja_adicionados.add(rel_path_str)
-                                logger.info(f"   ✅ Encontrado: {rel_path}")
+                                logger.info(f"   ✅ Encontrado na raiz: {rel_path}")
                     
                     if len(arquivos_encontrados) > 0:
                         logger.info(f"   📋 Total de {len(arquivos_encontrados)} arquivo(s) de alterações encontrado(s)")
+                    else:
+                        logger.error(f"   ❌ NENHUM arquivo de alterações encontrado!")
 
                 # Para "minuta", se o usuário renomear o arquivo (ex: "Minuta V2.txt"),
                 # tentamos descobrir automaticamente qualquer *minuta*.{txt,pdf} na pasta base.
