@@ -6,6 +6,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import json
 import asyncio
@@ -1170,16 +1171,38 @@ async def handle_gerar_minuta(
 
 
 # ============================================================================
+# SERVIR FRONTEND ESTÁTICO (deve ser o último, após todos os endpoints)
+# ============================================================================
+
+# Servir frontend estático (apenas em produção ou se configurado)
+# IMPORTANTE: Deve ser adicionado DEPOIS de todos os outros endpoints
+# para que as rotas da API tenham prioridade sobre o frontend
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+if FRONTEND_DIR.exists() and os.getenv("SERVE_FRONTEND", "false").lower() == "true":
+    # Montar frontend na raiz, mas apenas para rotas que não começam com /api, /docs, /ws, etc.
+    # FastAPI já prioriza rotas definidas antes do mount
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    logger.info(f"📱 Frontend será servido de: {FRONTEND_DIR}")
+else:
+    logger.info("📱 Frontend não será servido (use SERVE_FRONTEND=true para habilitar)")
+
+
+# ============================================================================
 # EXECUTAR
 # ============================================================================
 
 if __name__ == "__main__":
     import uvicorn
     
+    # Obter configurações de ambiente
+    host = os.getenv("API_HOST", "0.0.0.0")
+    port = int(os.getenv("API_PORT", "8000"))
+    reload = os.getenv("ENVIRONMENT", "development") == "development"
+    
     uvicorn.run(
         "api:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=host,
+        port=port,
+        reload=reload,
         log_level="info"
     )

@@ -1,53 +1,67 @@
 # ============================================================================
-# TRE-GO Minuta Builder - Git Ignore
+# .gitignore - Arquivos a ignorar no Git
 # ============================================================================
 
-# Ambiente Python
+# Ambiente virtual
+venv/
+env/
+.venv/
+ENV/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-venv/
-.venv/
-ENV/
+*.egg-info/
+dist/
+build/
+*.egg
 
-# IDEs
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Arquivos de configuração sensíveis
+# Arquivos de ambiente (NUNCA commitar!)
 .env
-*.env.local
+.env.local
+.env.*.local
+*.env
 
-# Databases e arquivos temporários
-tmp/
+# Banco de dados
 *.db
 *.sqlite
 *.sqlite3
-lancedb_*/
 
-# Exports (podem ser gerados novamente)
-exports/*.md
-
-# Logs
-logs/
+# Diretórios temporários
+tmp/
+*.tmp
 *.log
+logs/
 
-# OS
+# Exports (podem conter dados sensíveis)
+exports/
+*.md
+!README.md
+!DEPLOY.md
+!ARCHITECTURE.md
+!ARQUITETURA_MINUTA_ATUALIZADA.md
+!ANALISE_MELHORIAS.md
+!RESUMO_MVP.md
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+
+# Docker
+.dockerignore
+
+# Sistema operacional
 Thumbs.db
+.DS_Store
 
-# Cache
-.cache/
-*.cache
-
-# Arquivos grandes (PDFs originais - manter em backup separado)
-files/regulamentos/**/*.pdf
-*.pdf
-
-# Node (caso use para frontend)
-node_modules/
+# Arquivos de backup
+*.bak
+*.backup
+*~

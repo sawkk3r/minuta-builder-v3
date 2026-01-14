@@ -648,8 +648,36 @@
             connected: false
         };
 
-        const API_URL = 'http://localhost:8000';
-        const WS_URL = 'ws://localhost:8000';
+        // ============================================================================
+        // Detecção automática da URL da API
+        // ============================================================================
+        
+        // Detectar se está rodando localmente ou em produção
+        function getApiUrl() {
+            // Se estiver rodando em produção (não localhost), usar a mesma origem
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                // Em produção, API e frontend estão no mesmo domínio
+                const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+                return `${protocol}//${window.location.host}`;
+            }
+            // Em desenvolvimento local
+            return 'http://localhost:8000';
+        }
+        
+        function getWsUrl() {
+            const apiUrl = getApiUrl();
+            // Converter http:// para ws:// e https:// para wss://
+            if (apiUrl.startsWith('https://')) {
+                return apiUrl.replace('https://', 'wss://');
+            }
+            return apiUrl.replace('http://', 'ws://');
+        }
+        
+        const API_URL = getApiUrl();
+        const WS_URL = getWsUrl();
+        
+        console.log('🌐 API URL:', API_URL);
+        console.log('🔌 WebSocket URL:', WS_URL);
 
         // ============================================================================
         // Utilidades

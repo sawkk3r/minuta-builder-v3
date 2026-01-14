@@ -16,6 +16,7 @@ Sistema colaborativo para construção da Minuta V2 do Regulamento Interno do Tr
 - **🧠 Team Coordenador**: Consolidação inteligente de análises com GPT-5.2 (reasoning) e coordenação de conversas entre agentes
 - **💾 Sessões Persistentes**: Histórico completo de interações com SQLite
 - **📄 Exportação**: Markdown e documentos consolidados no formato de regulamento
+- **🌐 Deploy Online**: Pronto para deploy na internet (Render, Railway, Fly.io, etc.)
 
 ## 🏗️ Arquitetura
 
@@ -44,7 +45,29 @@ Sistema colaborativo para construção da Minuta V2 do Regulamento Interno do Tr
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Instalação
+## 🌐 Deploy Online (Novo!)
+
+O sistema está pronto para deploy na internet! Seus colegas podem usar o MVP online.
+
+**📖 Guias de Deploy:**
+- **Deploy Rápido (5 minutos)**: Veja [`DEPLOY_RAPIDO.md`](DEPLOY_RAPIDO.md)
+- **Guia Completo**: Veja [`DEPLOY.md`](DEPLOY.md) com todas as opções
+
+**Opções disponíveis:**
+- ✅ **Render.com** (recomendado - grátis)
+- ✅ **Railway.app** (fácil - $5 grátis/mês)
+- ✅ **Fly.io** (rápido - plano gratuito)
+- ✅ **Docker Compose** (VPS próprio)
+
+**Recursos incluídos:**
+- ✅ Dockerfile pronto para produção
+- ✅ Frontend detecta automaticamente a URL da API
+- ✅ Configuração de variáveis de ambiente
+- ✅ Health checks e monitoramento
+
+---
+
+## 🚀 Instalação Local
 
 ### 1. Clonar e configurar ambiente
 

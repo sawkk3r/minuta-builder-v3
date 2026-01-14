@@ -1,0 +1,48 @@
+# ============================================================================
+# Render.com - Configuração de Deploy
+# ============================================================================
+# 
+# Instruções:
+# 1. Crie uma conta em https://render.com
+# 2. Conecte seu repositório GitHub
+# 3. Render detectará automaticamente este arquivo
+# 4. Configure as variáveis de ambiente (veja abaixo)
+#
+# ============================================================================
+
+services:
+  - type: web
+    name: tre-go-minuta-builder-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter  # ou 'standard' para mais recursos
+    region: oregon  # ou 'frankfurt', 'singapore', etc.
+    branch: main  # branch para deploy automático
+    envVars:
+      # OBRIGATÓRIO - Configure no painel do Render
+      - key: OPENAI_API_KEY
+        sync: false  # Não sincronizar - configure manualmente
+      
+      # Modelos (opcional)
+      - key: MODEL_AGENTES
+        value: gpt-5-mini-2025-08-07
+      - key: MODEL_COORDENADOR
+        value: gpt-5.2-2025-12-11
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      
+      # Ambiente
+      - key: ENVIRONMENT
+        value: production
+      
+      # Python
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    
+    healthCheckPath: /status
+    autoDeploy: true  # Deploy automático em push para main
+    
+    # Recursos (ajuste conforme necessário)
+    # plan: starter = 512MB RAM, 0.5 CPU
+    # plan: standard = 2GB RAM, 1 CPU (recomendado para produção)

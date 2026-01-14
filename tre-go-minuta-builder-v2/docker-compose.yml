@@ -1,0 +1,48 @@
+# ============================================================================
+# Docker Compose para TRE-GO Minuta Builder v2.0
+# ============================================================================
+
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tre-go-minuta-builder
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # API Keys (OBRIGATÓRIO - configure no .env)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # Modelos (opcional - defaults)
+      - MODEL_AGENTES=${MODEL_AGENTES:-gpt-5-mini-2025-08-07}
+      - MODEL_COORDENADOR=${MODEL_COORDENADOR:-gpt-5.2-2025-12-11}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      
+      # Configurações da API
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      
+      # Ambiente
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    volumes:
+      # Persistir dados entre reinicializações
+      - ./files:/app/files:ro  # Apenas leitura para arquivos de regulamento
+      - ./tmp:/app/tmp          # Banco de dados LanceDB
+      - ./exports:/app/exports  # Arquivos exportados
+      - ./logs:/app/logs        # Logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/status')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - minuta-builder-network
+
+networks:
+  minuta-builder-network:
+    driver: bridge
