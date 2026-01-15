@@ -447,33 +447,11 @@ class AgenteEspecialista:
         # Se agente Agno disponível, usar
         if self.agent:
             try:
-                # CRÍTICO: Garantir que a knowledge base do Agent está sincronizada
-                # O Agno pode ter uma referência interna stale da tabela
-                # SOLUÇÃO: Sempre atualizar a knowledge base do Agent com a referência mais recente
+                # Garantir que a knowledge base do Agent está configurada
+                # A knowledge base já deve estar carregada no startup (não recarregamos durante consulta)
                 if knowledge is not None:
-                    # Forçar atualização da knowledge base no Agent
-                    # Isso garante que o Agent use a mesma referência que acabamos de verificar/atualizar
+                    # Atualizar referência no Agent (knowledge já está carregada)
                     self.agent.knowledge = knowledge
-                    
-                    # Garantir que a tabela está carregada na knowledge base que acabamos de passar
-                    if hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'table'):
-                        vector_db = knowledge.vector_db
-                        lance_uri = getattr(vector_db, 'uri', None)
-                        lance_table_name = getattr(vector_db, 'table_name', f"regulamento_{self.versao.value}")
-                        
-                        # SEMPRE recarregar a tabela para garantir que está atualizada
-                        if lance_uri:
-                            try:
-                                import lancedb
-                                lance_conn = lancedb.connect(lance_uri)
-                                if lance_table_name in lance_conn.table_names():
-                                    # Recarregar tabela - isso garante que temos a versão mais recente
-                                    knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
-                                    # Atualizar novamente no Agent
-                                    self.agent.knowledge = knowledge
-                                    logger.info(f"   🔄 Tabela '{lance_table_name}' recarregada e sincronizada no Agent")
-                            except Exception as e:
-                                logger.warning(f"   ⚠️ Erro ao recarregar tabela no Agent: {e}")
                 
                 # DEBUG: Verificar estado da knowledge base antes de executar
                 if self.versao.value == "minuta":

@@ -114,44 +114,34 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"   ⚠️ {len(versoes_sem_dados)} knowledge base(s) sem dados: {', '.join(versoes_sem_dados)}")
                 
                 # Indexação automática no startup (se habilitada)
+                # IMPORTANTE: Se habilitada, indexa ANTES de inicializar agentes para garantir conhecimento prévio
                 auto_index_env = os.getenv("AUTO_INDEX_ON_STARTUP", "false")
                 auto_index = auto_index_env.lower() == "true"
                 logger.info(f"   🔍 AUTO_INDEX_ON_STARTUP={auto_index_env} (detectado: {auto_index})")
                 
                 if auto_index:
-                    logger.info("   🔄 AUTO_INDEX_ON_STARTUP=true - Iniciando indexação automática em background...")
-                    logger.info("   ⏳ Isso pode levar alguns minutos. O servidor já está pronto para receber requisições.")
+                    logger.info("   🔄 AUTO_INDEX_ON_STARTUP=true - Iniciando indexação automática...")
+                    logger.info("   ⏳ Isso pode levar alguns minutos. Aguardando conclusão antes de inicializar agentes...")
                     
-                    async def indexar_automaticamente():
-                        try:
-                            logger.info("   📚 Iniciando indexação automática...")
-                            resultados = await km.indexar_documentos(versao=None, force=False)
-                            logger.info(f"   ✅ Indexação automática concluída: {resultados}")
-                            
-                            # Recarregar agentes após indexação
-                            try:
-                                agentes = get_gerenciador_agentes()
-                                for v in versoes_sem_dados:
-                                    knowledge = km.obter_knowledge(v)
-                                    if knowledge and hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'uri'):
-                                        import lancedb
-                                        lance_uri = knowledge.vector_db.uri
-                                        lance_table_name = getattr(knowledge.vector_db, 'table_name', f"regulamento_{v}")
-                                        lance_conn = lancedb.connect(lance_uri)
-                                        if lance_table_name in lance_conn.table_names():
-                                            knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
-                                            agente = agentes.obter_agente(v)
-                                            if agente and hasattr(agente, 'agent') and agente.agent:
-                                                agente.agent.knowledge = knowledge
-                                                logger.info(f"   🔄 Agente '{v}' atualizado após indexação automática")
-                            except Exception as e:
-                                logger.warning(f"   ⚠️ Erro ao recarregar agentes: {e}")
-                        except Exception as e:
-                            logger.error(f"   ❌ Erro na indexação automática: {e}")
-                    
-                    # Executar em background (não bloquear startup)
-                    import asyncio
-                    asyncio.create_task(indexar_automaticamente())
+                    try:
+                        # Indexar ANTES de inicializar agentes (bloqueia startup até completar)
+                        resultados = await km.indexar_documentos(versao=None, force=False)
+                        logger.info(f"   ✅ Indexação automática concluída: {resultados}")
+                        
+                        # Recarregar knowledge bases após indexação
+                        for v in versoes_sem_dados:
+                            knowledge = km.obter_knowledge(v)
+                            if knowledge and hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'uri'):
+                                import lancedb
+                                lance_uri = knowledge.vector_db.uri
+                                lance_table_name = getattr(knowledge.vector_db, 'table_name', f"regulamento_{v}")
+                                lance_conn = lancedb.connect(lance_uri)
+                                if lance_table_name in lance_conn.table_names():
+                                    knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
+                                    logger.info(f"   ✅ Knowledge base '{v}' recarregada após indexação")
+                    except Exception as e:
+                        logger.error(f"   ❌ Erro na indexação automática: {e}")
+                        logger.warning("   ⚠️ Continuando startup mesmo com erro na indexação")
                 else:
                     logger.info("   💡 Execute POST /knowledge/indexar para indexar quando necessário")
                     logger.info("   💡 Ou configure AUTO_INDEX_ON_STARTUP=true para indexação automática")
