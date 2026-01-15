@@ -36,9 +36,9 @@ services:
       - key: ENVIRONMENT
         value: production
       
-      # Indexação automática (recomendado para Render - sistema de arquivos efêmero)
+      # Indexação automática (desabilitada - faça manualmente quando necessário)
       - key: AUTO_INDEX_ON_STARTUP
-        value: "true"  # Indexa automaticamente se bases estiverem vazias
+        value: "false"  # Desabilitado - indexe manualmente via POST /knowledge/indexar
       
       # Python
       - key: PYTHONUNBUFFERED
