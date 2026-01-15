@@ -81,6 +81,9 @@ async def lifespan(app: FastAPI):
     auto_index_env = os.getenv("AUTO_INDEX_ON_STARTUP", "false")
     logger.info(f"🔍 Variáveis de ambiente: AUTO_INDEX_ON_STARTUP={auto_index_env}")
     
+    # Variável para armazenar versões que precisam ser indexadas
+    versoes_para_indexar = []
+    
     # Inicializar Knowledge Manager
     logger.info("📚 Inicializando Knowledge Manager...")
     km = get_knowledge_manager()
@@ -114,34 +117,17 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"   ⚠️ {len(versoes_sem_dados)} knowledge base(s) sem dados: {', '.join(versoes_sem_dados)}")
                 
                 # Indexação automática no startup (se habilitada)
-                # IMPORTANTE: Se habilitada, indexa ANTES de inicializar agentes para garantir conhecimento prévio
+                # IMPORTANTE: Indexação em background para não bloquear startup (Render precisa detectar porta)
                 auto_index_env = os.getenv("AUTO_INDEX_ON_STARTUP", "false")
                 auto_index = auto_index_env.lower() == "true"
                 logger.info(f"   🔍 AUTO_INDEX_ON_STARTUP={auto_index_env} (detectado: {auto_index})")
                 
                 if auto_index:
-                    logger.info("   🔄 AUTO_INDEX_ON_STARTUP=true - Iniciando indexação automática...")
-                    logger.info("   ⏳ Isso pode levar alguns minutos. Aguardando conclusão antes de inicializar agentes...")
+                    logger.info("   🔄 AUTO_INDEX_ON_STARTUP=true - Indexação será iniciada em background após servidor subir")
+                    logger.info("   ⏳ Isso pode levar alguns minutos. Servidor já está pronto para receber requisições.")
                     
-                    try:
-                        # Indexar ANTES de inicializar agentes (bloqueia startup até completar)
-                        resultados = await km.indexar_documentos(versao=None, force=False)
-                        logger.info(f"   ✅ Indexação automática concluída: {resultados}")
-                        
-                        # Recarregar knowledge bases após indexação
-                        for v in versoes_sem_dados:
-                            knowledge = km.obter_knowledge(v)
-                            if knowledge and hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'uri'):
-                                import lancedb
-                                lance_uri = knowledge.vector_db.uri
-                                lance_table_name = getattr(knowledge.vector_db, 'table_name', f"regulamento_{v}")
-                                lance_conn = lancedb.connect(lance_uri)
-                                if lance_table_name in lance_conn.table_names():
-                                    knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
-                                    logger.info(f"   ✅ Knowledge base '{v}' recarregada após indexação")
-                    except Exception as e:
-                        logger.error(f"   ❌ Erro na indexação automática: {e}")
-                        logger.warning("   ⚠️ Continuando startup mesmo com erro na indexação")
+                    # Armazenar versões para indexação em background
+                    versoes_para_indexar = versoes_sem_dados.copy()
                 else:
                     logger.info("   💡 Execute POST /knowledge/indexar para indexar quando necessário")
                     logger.info("   💡 Ou configure AUTO_INDEX_ON_STARTUP=true para indexação automática")
@@ -169,6 +155,50 @@ async def lifespan(app: FastAPI):
     logger.info(f"   ✅ {sessoes.status()['total_sessoes']} sessões carregadas")
     
     logger.info("✅ API pronta para receber requisições!")
+    
+    # Indexação automática em background (após servidor estar pronto)
+    # Isso garante que o Render detecte a porta antes da indexação começar
+    if versoes_para_indexar:
+        async def indexar_automaticamente_background():
+            try:
+                await asyncio.sleep(2)  # Pequeno delay para garantir que servidor está rodando
+                logger.info("   📚 Iniciando indexação automática em background...")
+                
+                agentes = get_gerenciador_agentes()
+                
+                # Indexar versão por versão e recarregar agentes incrementalmente
+                for v in versoes_para_indexar:
+                    try:
+                        logger.info(f"   📄 Indexando versão '{v}'...")
+                        resultados = await km.indexar_documentos(versao=v, force=False)
+                        logger.info(f"   ✅ Versão '{v}' indexada: {resultados.get(v, False)}")
+                        
+                        # Recarregar knowledge base após indexação
+                        knowledge = km.obter_knowledge(v)
+                        if knowledge and hasattr(knowledge, 'vector_db') and hasattr(knowledge.vector_db, 'uri'):
+                            import lancedb
+                            lance_uri = knowledge.vector_db.uri
+                            lance_table_name = getattr(knowledge.vector_db, 'table_name', f"regulamento_{v}")
+                            lance_conn = lancedb.connect(lance_uri)
+                            if lance_table_name in lance_conn.table_names():
+                                knowledge.vector_db.table = lance_conn.open_table(lance_table_name)
+                                logger.info(f"   ✅ Knowledge base '{v}' recarregada")
+                                
+                                # Atualizar agente correspondente
+                                agente = agentes.obter_agente(v)
+                                if agente and hasattr(agente, 'agent') and agente.agent:
+                                    agente.agent.knowledge = knowledge
+                                    logger.info(f"   🔄 Agente '{v}' atualizado com conhecimento indexado")
+                    except Exception as e:
+                        logger.error(f"   ❌ Erro ao indexar versão '{v}': {e}")
+                
+                logger.info("   ✅ Indexação automática concluída!")
+            except Exception as e:
+                logger.error(f"   ❌ Erro na indexação automática em background: {e}")
+        
+        # Executar em background (não bloqueia startup)
+        import asyncio
+        asyncio.create_task(indexar_automaticamente_background())
     
     yield
     
