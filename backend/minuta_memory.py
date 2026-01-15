@@ -138,11 +138,11 @@ class MinutaMemory:
             if not insight_texto:
                 return None
             
-                # Criar nome do arquivo único baseado em timestamp e agente
+            # Criar nome do arquivo único baseado em timestamp e agente
             timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
             session_prefix = f"{self.session_id}_" if self.session_id else ""
             # Usar apenas primeiros caracteres do session_id se muito longo
-            session_short = session_id[:8] if session_id and len(session_id) > 8 else (session_id or "")
+            session_short = self.session_id[:8] if self.session_id and len(self.session_id) > 8 else (self.session_id or "")
             filename = f"{session_short}_memoria_{interacao.agente}_{timestamp_str}.txt" if session_short else f"memoria_{interacao.agente}_{timestamp_str}.txt"
             filepath = self.files_dir / filename
             

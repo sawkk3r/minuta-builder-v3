@@ -77,6 +77,10 @@ async def lifespan(app: FastAPI):
     """Gerencia ciclo de vida da aplicação."""
     logger.info("🚀 Iniciando TRE-GO Minuta Builder API...")
     
+    # Log de variáveis de ambiente importantes
+    auto_index_env = os.getenv("AUTO_INDEX_ON_STARTUP", "false")
+    logger.info(f"🔍 Variáveis de ambiente: AUTO_INDEX_ON_STARTUP={auto_index_env}")
+    
     # Inicializar Knowledge Manager
     logger.info("📚 Inicializando Knowledge Manager...")
     km = get_knowledge_manager()
@@ -110,7 +114,10 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"   ⚠️ {len(versoes_sem_dados)} knowledge base(s) sem dados: {', '.join(versoes_sem_dados)}")
                 
                 # Indexação automática no startup (se habilitada)
-                auto_index = os.getenv("AUTO_INDEX_ON_STARTUP", "false").lower() == "true"
+                auto_index_env = os.getenv("AUTO_INDEX_ON_STARTUP", "false")
+                auto_index = auto_index_env.lower() == "true"
+                logger.info(f"   🔍 AUTO_INDEX_ON_STARTUP={auto_index_env} (detectado: {auto_index})")
+                
                 if auto_index:
                     logger.info("   🔄 AUTO_INDEX_ON_STARTUP=true - Iniciando indexação automática em background...")
                     logger.info("   ⏳ Isso pode levar alguns minutos. O servidor já está pronto para receber requisições.")
