@@ -22,6 +22,10 @@ agno[openai,lancedb]>=2.0.0
 lancedb>=0.4.0
 sqlalchemy>=2.0.0
 
+# AWS S3 (para persistência no Render - opcional)
+boto3>=1.34.0  # Requerido pelo LanceDB para S3
+s3fs>=2024.2.0  # Sistema de arquivos S3
+
 # Processamento de PDFs
 pypdf>=3.17.0
 

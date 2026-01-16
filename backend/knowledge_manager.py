@@ -106,6 +106,22 @@ class KnowledgeManager:
         # Database SQLite compartilhado para metadados
         self.sqlite_db_path = self.db_dir / "knowledge_metadata.db"
         
+        # Configuração S3 (opcional - para persistência no Render)
+        self.s3_bucket = os.getenv("LANCE_S3_BUCKET")
+        self.s3_region = os.getenv("AWS_REGION", "us-east-1")
+        self.use_s3 = bool(self.s3_bucket)
+        
+        if self.use_s3:
+            logger.info(f"💾 Usando S3 para persistência: s3://{self.s3_bucket}/lancedb/")
+            # Configurar credenciais AWS (se não estiverem no ambiente padrão)
+            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            if aws_access_key and aws_secret_key:
+                os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key
+                os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key
+        else:
+            logger.info(f"💾 Usando armazenamento local: {self.db_dir}")
+        
     async def inicializar(self) -> bool:
         """
         Inicializa todas as bases de conhecimento.
@@ -142,7 +158,14 @@ class KnowledgeManager:
                 )
                 
                 # LanceDB para vetores
-                lance_uri = str(self.db_dir / f"lancedb_{versao}")
+                # Usar S3 se configurado, senão usar local
+                if self.use_s3:
+                    lance_uri = f"s3://{self.s3_bucket}/lancedb/{versao}"
+                    logger.info(f"   💾 URI LanceDB (S3): {lance_uri}")
+                else:
+                    lance_uri = str(self.db_dir / f"lancedb_{versao}")
+                    logger.info(f"   💾 URI LanceDB (local): {lance_uri}")
+                
                 lance_table_name = f"regulamento_{versao}"
                 
                 vector_db = LanceDb(
